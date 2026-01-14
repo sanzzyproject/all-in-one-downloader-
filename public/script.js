@@ -31,22 +31,31 @@ async function handleDownload() {
     try {
         const response = await fetch('/api/download', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ url: url })
         });
 
-        const data = await response.json();
+        // Trik Debugging: Ambil text dulu, baru parse ke JSON
+        const textData = await response.text();
+        let data;
 
-        if (!response.ok || !data) {
-            throw new Error(data.error || 'Gagal mengambil data.');
+        try {
+            data = JSON.parse(textData);
+        } catch (e) {
+            // Jika gagal parse JSON, berarti server mengirim error HTML/Text
+            console.error("Server raw response:", textData);
+            throw new Error("Respon server tidak valid. Cek Console untuk detail.");
+        }
+
+        if (!response.ok) {
+            throw new Error(data.error || data.details || 'Gagal mengambil data.');
         }
 
         renderResult(data);
 
     } catch (error) {
-        errorMsg.textContent = 'Terjadi kesalahan: ' + error.message;
+        console.error(error);
+        errorMsg.textContent = 'Error: ' + error.message;
     } finally {
         // Restore State
         btn.disabled = false;
@@ -58,43 +67,39 @@ async function handleDownload() {
 function renderResult(data) {
     const resultArea = document.getElementById('resultArea');
     
-    // Parsing data dari API Amoyshare biasanya agak dalam strukturnya
-    // Kita cek struktur umum yang dikembalikan
+    // Normalisasi data (karena API AmoyShare strukturnya berubah-ubah)
+    const title = data.title || data.desc || data.description || 'No Title';
+    const thumbnail = data.thumbnail || data.cover || 'https://via.placeholder.com/150?text=No+Image';
+    const source = data.type || data.source || 'Media';
     
-    // Fallback title dan gambar jika API tidak memberikan detail jelas
-    const title = data.title || data.description || 'Unknown Title';
-    const thumbnail = data.thumbnail || 'https://via.placeholder.com/150?text=No+Image';
-    
-    // Ambil list format (Video/Audio)
-    // Note: Struktur data amoyshare bisa bervariasi tergantung platform (TikTok/YT/dll)
-    // Script ini mencoba mengakomodasi struktur umumnya.
+    // Gabungkan video dan audio options
+    let formats = [];
+    if (Array.isArray(data.video)) formats = [...formats, ...data.video];
+    if (Array.isArray(data.audio)) formats = [...formats, ...data.audio];
+
     let linksHtml = '';
 
-    // Cek jika ada property 'video' atau 'audio' atau list formats
-    const formats = [...(data.video || []), ...(data.audio || [])];
-
-    if (formats.length === 0 && data.url) {
-        // Jika langsung mereturn URL tanpa list format
-        linksHtml += `
-            <a href="${data.url}" target="_blank" class="dl-btn">
-                <span>Download File</span>
-                <span class="size">Auto</span>
-            </a>
-        `;
-    } else {
+    if (formats.length > 0) {
         formats.forEach(item => {
+            const formatName = item.format_note || item.quality || item.ext || 'Download';
+            const fileSize = item.size ? `(${item.size})` : '';
             linksHtml += `
                 <a href="${item.url}" target="_blank" class="dl-btn">
-                    <span>${item.format_note || item.ext || 'Download'} ${item.quality || ''}</span>
-                    <span class="size">${item.size || ''}</span>
+                    <span>${formatName}</span>
+                    <span class="size">${fileSize}</span>
                 </a>
             `;
         });
-    }
-
-    if (linksHtml === '') {
-        // Jika struktur data berbeda, coba ambil raw url jika ada
-        linksHtml = '<p style="text-align:center; color:#666;">Link download tidak ditemukan atau format tidak didukung.</p>';
+    } else if (data.url) {
+        // Fallback jika hanya ada single URL
+        linksHtml = `
+            <a href="${data.url}" target="_blank" class="dl-btn">
+                <span>Download File</span>
+                <span class="size">Direct</span>
+            </a>
+        `;
+    } else {
+        linksHtml = '<p style="text-align:center; color:#666; font-size: 0.9rem;">Link download tidak ditemukan.</p>';
     }
 
     const html = `
@@ -103,7 +108,7 @@ function renderResult(data) {
                 <img src="${thumbnail}" alt="Thumbnail" class="thumb-img">
                 <div class="meta">
                     <h3>${title}</h3>
-                    <span>${data.source || 'Media'}</span>
+                    <span>${source}</span>
                 </div>
             </div>
             <div class="download-options">
