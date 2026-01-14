@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All-in-One Downloader</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <main class="container">
+        <header>
+            <h1>AIO Downloader</h1>
+            <p>Download video & musik dari berbagai platform dengan mudah.</p>
+        </header>
+
+        <section class="search-box">
+            <div class="input-group">
+                <input type="text" id="urlInput" placeholder="Tempel tautan video di sini (TikTok, YT, FB, dll)..." autocomplete="off">
+                <button id="downloadBtn">
+                    <span id="btnText">Download</span>
+                    <div class="loader" id="btnLoader"></div>
+                </button>
+            </div>
+            <p class="error-msg" id="errorMsg"></p>
+        </section>
+
+        <section id="resultArea" class="result-area hidden">
+            </section>
+
+        <footer>
+            <p>&copy; 2024 AIO Downloader. Powered by AmoyShare API.</p>
+        </footer>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
